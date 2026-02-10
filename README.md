@@ -10,8 +10,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/env-vault"><img src="https://img.shields.io/npm/v/env-vault.svg" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/env-vault"><img src="https://img.shields.io/npm/dm/env-vault.svg" alt="npm downloads" /></a>
+  <a href="https://www.npmjs.com/package/@ouchanip/env-vault"><img src="https://img.shields.io/npm/v/@ouchanip/env-vault.svg" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@ouchanip/env-vault"><img src="https://img.shields.io/npm/dm/@ouchanip/env-vault.svg" alt="npm downloads" /></a>
   <a href="https://github.com/ouchanip/env-vault-node/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
 </p>
 
@@ -31,24 +31,23 @@ Every dev team has `.env` files with API keys, database passwords, and tokens. Y
   <img src="assets/animation.gif" alt="env-vault encryption animation" width="700" />
 </p>
 
-<details>
-<summary>📟 CLI Demo</summary>
+### 📟 CLI in Action
+
 <p align="center">
   <img src="assets/demo.gif" alt="env-vault CLI demo" width="700" />
 </p>
-</details>
 
 ## Quick Start
 
 ```bash
 # 1. Generate encryption key
-npx env-vault init
+npx @ouchanip/env-vault init
 
 # 2. Encrypt .env → .env.enc (safe to commit)
-npx env-vault encrypt
+npx @ouchanip/env-vault encrypt
 
 # 3. Decrypt .env.enc → .env (restore secrets)
-npx env-vault decrypt -o .env
+npx @ouchanip/env-vault decrypt -o .env
 ```
 
 **That's it. Three commands. Zero config.**
@@ -57,13 +56,13 @@ npx env-vault decrypt -o .env
 
 ```bash
 # Run directly (no install)
-npx env-vault <command>
+npx @ouchanip/env-vault <command>
 
 # Or install globally
-npm install -g env-vault
+npm install -g @ouchanip/env-vault
 
 # Or as a dev dependency
-npm install --save-dev env-vault
+npm install --save-dev @ouchanip/env-vault
 ```
 
 ## Commands
