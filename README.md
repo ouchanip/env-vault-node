@@ -28,8 +28,15 @@ Every dev team has `.env` files with API keys, database passwords, and tokens. Y
 `env-vault` encrypts your `.env` into `.env.enc` — a file you **can** safely commit to Git. Only team members with the key can decrypt it.
 
 <p align="center">
-  <img src="assets/demo.gif" alt="env-vault demo" width="700" />
+  <img src="assets/animation.gif" alt="env-vault encryption animation" width="700" />
 </p>
+
+<details>
+<summary>📟 CLI Demo</summary>
+<p align="center">
+  <img src="assets/demo.gif" alt="env-vault CLI demo" width="700" />
+</p>
+</details>
 
 ## Quick Start
 
