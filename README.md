@@ -88,12 +88,12 @@ decrypt:
 ## Workflow
 
 ```
-Developer A                    Git Repo                    Developer B
-┌──────────┐                 ┌──────────┐                 ┌──────────┐
-│  .env     │── encrypt ──▶  │ .env.enc │  ◀── pull ──   │          │
-│  .env.key │                │          │                 │ .env.key │
-└──────────┘                 └──────────┘                 └──────────┘
-                                                           decrypt ──▶ .env
+ Developer A                  Git Repo                  Developer B
+┌──────────┐                ┌──────────┐                ┌──────────┐
+│   .env   │── encrypt ──▶  │ .env.enc │  ◀── pull ──   │          │
+│ .env.key │                │          │                │ .env.key │
+└──────────┘                └──────────┘                └──────────┘
+                                                         decrypt ──▶ .env
 ```
 
 1. **Developer A** runs `env-vault encrypt` and commits `.env.enc`
