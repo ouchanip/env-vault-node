@@ -1,0 +1,50 @@
+{
+  "name": "env-vault",
+  "version": "1.0.0",
+  "description": "Secure .env file encryption for team collaboration — AES-256-GCM, zero config, works with npx",
+  "type": "module",
+  "bin": {
+    "env-vault": "bin/env-vault.js"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "keywords": [
+    "env",
+    "dotenv",
+    "encryption",
+    "secrets",
+    "vault",
+    "security",
+    "aes-256-gcm",
+    "cli",
+    "devops",
+    "environment-variables"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ouchanip/env-vault-node.git"
+  },
+  "homepage": "https://github.com/ouchanip/env-vault-node#readme",
+  "bugs": {
+    "url": "https://github.com/ouchanip/env-vault-node/issues"
+  },
+  "author": "ouchanip",
+  "license": "MIT",
+  "files": [
+    "bin/",
+    "src/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.57.0"
+  }
+}
