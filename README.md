@@ -79,7 +79,36 @@ encrypt:
 decrypt:
   -i, --input-file <path>   Input file (default: .env.enc)
   -o, --output-file <path>  Output file (default: stdout)
+  -f, --force               Overwrite output file if it already exists
+
+agent/script friendly:
+  --json                    Output structured JSON
+  -q, --quiet               Suppress successful human-readable output
+  --no-color                Disable ANSI color output
 ```
+
+### Agent-Friendly JSON Mode
+
+Every command supports `--json`, so automation and AI agents can parse results without scraping human text:
+
+```bash
+npx @ouchanip/env-vault init --json
+# {"ok":true,"type":"success","command":"init","keyPath":"/.../.env.key",...}
+
+npx @ouchanip/env-vault encrypt --json
+# {"ok":true,"type":"success","command":"encrypt","output":"/.../.env.enc",...}
+
+npx @ouchanip/env-vault decrypt --json
+# {"ok":true,"type":"success","command":"decrypt","data":"..."}
+```
+
+Exit codes are stable:
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success |
+| `1` | Error |
+| `2` | Refused to overwrite an existing output file |
 
 ## Workflow
 
@@ -119,8 +148,11 @@ decrypt:
 | IV          | 96 bits (12 bytes), random per encryption |
 | Auth Tag    | 128 bits (16 bytes)                     |
 | Dependencies| Node.js built-in `crypto` only          |
+| File mode   | `.env.key`, `.env.enc`, decrypted outputs are written as `0600` on POSIX |
 
 Every encryption generates a fresh random IV. The auth tag ensures integrity — any tampering is detected.
+
+`decrypt -o <file>` refuses to overwrite an existing file unless you pass `--force`.
 
 ## Testing
 
@@ -128,7 +160,7 @@ Every encryption generates a fresh random IV. The auth tag ensures integrity —
 npm test
 ```
 
-15 tests across 3 suites covering encryption, decryption, key generation, error handling, and edge cases.
+25 tests across 4 suites covering encryption, decryption, key generation, restrictive file modes, overwrite protection, JSON output, file I/O, error handling, and edge cases.
 
 ## Contributing
 

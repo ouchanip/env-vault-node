@@ -5,6 +5,7 @@ import { generateKey, encrypt as encryptData, decrypt as decryptData } from './c
 const KEY_FILENAME = '.env.key';
 const DEFAULT_INPUT_ENV = '.env';
 const DEFAULT_OUTPUT_ENC = '.env.enc';
+const SECRET_MODE = 0o600;
 
 async function getKey() {
   if (process.env.DOTENV_KEY) {
@@ -16,7 +17,7 @@ async function getKey() {
     return (await readFile(keyPath)).trim();
   }
 
-  throw new Error(`Key file ${KEY_FILENAME} not found. Run 'vault init' first.`);
+  throw new Error(`Key file ${KEY_FILENAME} not found. Run 'env-vault init' first.`);
 }
 
 export async function init() {
@@ -27,7 +28,7 @@ export async function init() {
   }
 
   const key = generateKey();
-  await writeFile(keyPath, key);
+  await writeFile(keyPath, key, SECRET_MODE);
   return keyPath;
 }
 
@@ -43,11 +44,13 @@ export async function encrypt(inputPath = DEFAULT_INPUT_ENV, outputPath = DEFAUL
   const key = await getKey();
   const encrypted = encryptData(content, key);
 
-  await writeFile(resolvedOutput, encrypted);
+  // Write .env.enc with restrictive permissions (issue #6)
+  await writeFile(resolvedOutput, encrypted, SECRET_MODE);
   return resolvedOutput;
 }
 
-export async function decrypt(inputPath = DEFAULT_OUTPUT_ENC, outputPath = null) {
+export async function decrypt(inputPath = DEFAULT_OUTPUT_ENC, outputPath = null, options = {}) {
+  const { force = false } = options;
   const resolvedInput = path.resolve(process.cwd(), inputPath);
 
   const content = await readFile(resolvedInput);
@@ -60,14 +63,34 @@ export async function decrypt(inputPath = DEFAULT_OUTPUT_ENC, outputPath = null)
   try {
     decrypted = decryptData(content, key);
   } catch (error) {
-    throw new Error('Decryption failed. Invalid key or corrupted file.');
+    // Preserve original error for debugging (issue #7)
+    throw new Error('Decryption failed. Invalid key or corrupted file.', { cause: error });
   }
 
   if (outputPath) {
     const resolvedOutput = path.resolve(process.cwd(), outputPath);
-    await writeFile(resolvedOutput, decrypted);
+
+    // Warn before overwriting existing files (issue #4)
+    if (!force && await fileExists(resolvedOutput)) {
+      throw new OverwriteError(resolvedOutput);
+    }
+
+    await writeFile(resolvedOutput, decrypted, SECRET_MODE);
     return { type: 'file', path: resolvedOutput };
   } else {
     return { type: 'content', data: decrypted };
+  }
+}
+
+/**
+ * Custom error for overwrite protection — allows CLI to distinguish
+ * exit code 2 (overwrite warning) from exit code 1 (generic error).
+ */
+export class OverwriteError extends Error {
+  constructor(filepath) {
+    super(`Output file already exists: ${filepath}. Use --force to overwrite.`);
+    this.name = 'OverwriteError';
+    this.code = 'OVERWRITE';
+    this.filepath = filepath;
   }
 }
