@@ -65,10 +65,10 @@ addAgentOptions(program.command('init'))
     try {
       const keyPath = await init();
       emit('success', { command: 'init', keyPath, message: `Key generated at ${keyPath}` });
-      process.exit(EXIT.OK);
+      process.exitCode = EXIT.OK;
     } catch (error) {
       emit('error', { command: 'init', message: error.message });
-      process.exit(EXIT.ERROR);
+      process.exitCode = EXIT.ERROR;
     }
   });
 
@@ -86,10 +86,10 @@ addAgentOptions(program.command('encrypt'))
         output: outputPath,
         message: `Encrypted ${options.inputFile} → ${outputPath}`,
       });
-      process.exit(EXIT.OK);
+      process.exitCode = EXIT.OK;
     } catch (error) {
       emit('error', { command: 'encrypt', message: error.message });
-      process.exit(EXIT.ERROR);
+      process.exitCode = EXIT.ERROR;
     }
   });
 
@@ -115,14 +115,15 @@ addAgentOptions(program.command('decrypt'))
       } else {
         process.stdout.write(result.data);
       }
-      process.exit(EXIT.OK);
+      process.exitCode = EXIT.OK;
     } catch (error) {
       if (error instanceof OverwriteError) {
         emit('warn', { command: 'decrypt', message: error.message, output: error.filepath });
-        process.exit(EXIT.OVERWRITE);
+        process.exitCode = EXIT.OVERWRITE;
+        return;
       }
       emit('error', { command: 'decrypt', message: error.message });
-      process.exit(EXIT.ERROR);
+      process.exitCode = EXIT.ERROR;
     }
   });
 

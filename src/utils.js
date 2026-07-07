@@ -24,6 +24,7 @@ export async function readFile(filepath) {
  */
 export async function writeFile(filepath, content, mode = 0o644) {
   await fs.writeFile(filepath, content, { encoding: 'utf8', mode });
+  await fs.chmod(filepath, mode);
 }
 
 /**

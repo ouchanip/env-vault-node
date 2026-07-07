@@ -82,6 +82,7 @@ describe('E2E Tests', () => {
 
     execSync(`node "${BIN_PATH}" decrypt -o .env.out --force`, { stdio: 'pipe' });
     expect(fs.readFileSync('.env.out', 'utf8')).toBe('FOO=bar');
+    if (process.platform !== 'win32') expect(modeOf('.env.out')).toBe(0o600);
   });
 
   test('should support JSON output for agents', () => {
@@ -99,5 +100,19 @@ describe('E2E Tests', () => {
     output = execSync(`node "${BIN_PATH}" decrypt --json`, { encoding: 'utf8' });
     parsed = JSON.parse(output);
     expect(parsed).toMatchObject({ ok: true, type: 'success', command: 'decrypt', data: 'AGENT=ready' });
+  });
+
+  test('should print large decrypted output to stdout without truncation', () => {
+    execSync(`node "${BIN_PATH}" init`, { stdio: 'pipe' });
+    const largeValue = `LARGE=${'x'.repeat(1024 * 1024)}`;
+    fs.writeFileSync('.env', largeValue);
+    execSync(`node "${BIN_PATH}" encrypt`, { stdio: 'pipe' });
+
+    const output = execSync(`node "${BIN_PATH}" decrypt`, {
+      encoding: 'utf8',
+      maxBuffer: 2 * 1024 * 1024,
+    });
+
+    expect(output).toBe(largeValue);
   });
 });

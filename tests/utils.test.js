@@ -39,6 +39,22 @@ describe('Utils Module', () => {
     }
   });
 
+  it('writeFile reapplies the supplied mode when overwriting an existing file', async () => {
+    const file = path.join(tmpDir, 'existing-secret.txt');
+    await fs.writeFile(file, 'old-secret', { encoding: 'utf8', mode: 0o644 });
+    if (process.platform !== 'win32') {
+      await fs.chmod(file, 0o644);
+    }
+
+    await writeFile(file, 'new-secret', 0o600);
+
+    await expect(readFile(file)).resolves.toBe('new-secret');
+    if (process.platform !== 'win32') {
+      const stat = await fs.stat(file);
+      expect(stat.mode & 0o777).toBe(0o600);
+    }
+  });
+
   it('fileExists returns true only when a file exists', async () => {
     const file = path.join(tmpDir, 'exists.txt');
 
