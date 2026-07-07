@@ -1,6 +1,6 @@
 {
   "name": "@ouchanip/env-vault",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Secure .env file encryption for team collaboration — AES-256-GCM, zero config, works with npx",
   "type": "module",
   "bin": {

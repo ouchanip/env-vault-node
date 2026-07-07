@@ -8,103 +8,111 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const BIN_PATH = path.resolve(__dirname, '../bin/env-vault.js');
 
+function modeOf(file) {
+  return fs.statSync(file).mode & 0o777;
+}
+
 describe('E2E Tests', () => {
   let tmpDir;
   let originalCwd;
 
   beforeEach(() => {
-    // Create a temp directory for each test
-    // We create it inside os.tmpdir() but we need to ensure unique name
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'env-vault-e2e-'));
     originalCwd = process.cwd();
-    // We cannot change process.cwd() in Jest parallel tests safely,
-    // but if we run sequentially or use absolute paths it's better.
-    // However, the CLI relies on process.cwd() for .env and .env.key resolution.
-    // So changing process.cwd() is necessary for the CLI to find files in tmpDir
-    // UNLESS we pass paths explicitly.
-    // But `init` command generates .env.key in CWD.
-    // So we must change CWD.
-    // Assuming tests run serially or in separate processes.
-    try {
-      process.chdir(tmpDir);
-    } catch (err) {
-      console.error('Failed to change directory:', err);
-    }
+    process.chdir(tmpDir);
   });
 
   afterEach(() => {
-    // Cleanup
-    if (originalCwd) {
-        process.chdir(originalCwd);
-    }
+    if (originalCwd) process.chdir(originalCwd);
     if (tmpDir && fs.existsSync(tmpDir)) {
-        fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
 
   test('should complete the full workflow: init -> encrypt -> decrypt', () => {
-    // 1. Init
-    // We use node executable to run the bin script
-    // execSync throws if exit code != 0
-    let output;
-    try {
-        output = execSync(`node "${BIN_PATH}" init`, { encoding: 'utf8' });
-    } catch (e) {
-        console.error('Init failed:', e.stderr);
-        throw e;
-    }
+    let output = execSync(`node "${BIN_PATH}" init --no-color`, { encoding: 'utf8' });
     expect(output).toContain('Key generated');
     expect(fs.existsSync('.env.key')).toBe(true);
+    if (process.platform !== 'win32') expect(modeOf('.env.key')).toBe(0o600);
 
-    // 2. Create .env
     const envContent = 'SECRET=e2e-test-value';
     fs.writeFileSync('.env', envContent);
 
-    // 3. Encrypt
-    try {
-        output = execSync(`node "${BIN_PATH}" encrypt`, { encoding: 'utf8' });
-    } catch (e) {
-        console.error('Encrypt failed:', e.stderr);
-        throw e;
-    }
-    expect(output).toContain('Encrypted to');
+    output = execSync(`node "${BIN_PATH}" encrypt --no-color`, { encoding: 'utf8' });
+    expect(output).toContain('Encrypted .env');
     expect(fs.existsSync('.env.enc')).toBe(true);
+    if (process.platform !== 'win32') expect(modeOf('.env.enc')).toBe(0o600);
 
-    // 4. Decrypt to stdout
-    try {
-        output = execSync(`node "${BIN_PATH}" decrypt`, { encoding: 'utf8' });
-    } catch (e) {
-        console.error('Decrypt failed:', e.stderr);
-        throw e;
-    }
-    // The output should contain the content
+    output = execSync(`node "${BIN_PATH}" decrypt`, { encoding: 'utf8' });
     expect(output).toContain(envContent);
 
-    // 5. Decrypt to file
-    try {
-        output = execSync(`node "${BIN_PATH}" decrypt --output-file .env.decrypted`, { encoding: 'utf8' });
-    } catch (e) {
-        console.error('Decrypt to file failed:', e.stderr);
-        throw e;
-    }
-    expect(output).toContain('Decrypted to');
+    output = execSync(`node "${BIN_PATH}" decrypt --output-file .env.decrypted --no-color`, { encoding: 'utf8' });
+    expect(output).toContain('Decrypted .env.enc');
     expect(fs.existsSync('.env.decrypted')).toBe(true);
-    const decryptedContent = fs.readFileSync('.env.decrypted', 'utf8');
-    expect(decryptedContent).toBe(envContent);
+    expect(fs.readFileSync('.env.decrypted', 'utf8')).toBe(envContent);
+    if (process.platform !== 'win32') expect(modeOf('.env.decrypted')).toBe(0o600);
   });
 
-  test('should fail if key is missing', () => {
+  test('should fail if key is missing and suggest env-vault init', () => {
     fs.writeFileSync('.env', 'FOO=bar');
-    // skip init
+
     try {
-      execSync(`node "${BIN_PATH}" encrypt`, { stdio: 'pipe' }); // stdio pipe to capture stderr
-      // Should fail
+      execSync(`node "${BIN_PATH}" encrypt --no-color`, { stdio: 'pipe' });
       throw new Error('Should have failed');
     } catch (error) {
-      expect(error.status).not.toBe(0);
-      // stderr is a buffer if not specified encoding, or use error.stderr
-      const stderr = error.stderr.toString();
-      expect(stderr).toContain('Error');
+      expect(error.status).toBe(1);
+      expect(error.stderr.toString()).toContain('env-vault init');
     }
+  });
+
+  test('should refuse to overwrite existing decrypted output without --force', () => {
+    execSync(`node "${BIN_PATH}" init`, { stdio: 'pipe' });
+    fs.writeFileSync('.env', 'FOO=bar');
+    execSync(`node "${BIN_PATH}" encrypt`, { stdio: 'pipe' });
+    fs.writeFileSync('.env.out', 'existing');
+
+    try {
+      execSync(`node "${BIN_PATH}" decrypt -o .env.out --no-color`, { stdio: 'pipe' });
+      throw new Error('Should have failed');
+    } catch (error) {
+      expect(error.status).toBe(2);
+      expect(error.stderr.toString()).toContain('Use --force');
+      expect(fs.readFileSync('.env.out', 'utf8')).toBe('existing');
+    }
+
+    execSync(`node "${BIN_PATH}" decrypt -o .env.out --force`, { stdio: 'pipe' });
+    expect(fs.readFileSync('.env.out', 'utf8')).toBe('FOO=bar');
+    if (process.platform !== 'win32') expect(modeOf('.env.out')).toBe(0o600);
+  });
+
+  test('should support JSON output for agents', () => {
+    let output = execSync(`node "${BIN_PATH}" init --json`, { encoding: 'utf8' });
+    let parsed = JSON.parse(output);
+    expect(parsed).toMatchObject({ ok: true, type: 'success', command: 'init' });
+    expect(parsed.keyPath).toContain('.env.key');
+
+    fs.writeFileSync('.env', 'AGENT=ready');
+
+    output = execSync(`node "${BIN_PATH}" encrypt --json`, { encoding: 'utf8' });
+    parsed = JSON.parse(output);
+    expect(parsed).toMatchObject({ ok: true, type: 'success', command: 'encrypt' });
+
+    output = execSync(`node "${BIN_PATH}" decrypt --json`, { encoding: 'utf8' });
+    parsed = JSON.parse(output);
+    expect(parsed).toMatchObject({ ok: true, type: 'success', command: 'decrypt', data: 'AGENT=ready' });
+  });
+
+  test('should print large decrypted output to stdout without truncation', () => {
+    execSync(`node "${BIN_PATH}" init`, { stdio: 'pipe' });
+    const largeValue = `LARGE=${'x'.repeat(1024 * 1024)}`;
+    fs.writeFileSync('.env', largeValue);
+    execSync(`node "${BIN_PATH}" encrypt`, { stdio: 'pipe' });
+
+    const output = execSync(`node "${BIN_PATH}" decrypt`, {
+      encoding: 'utf8',
+      maxBuffer: 2 * 1024 * 1024,
+    });
+
+    expect(output).toBe(largeValue);
   });
 });
